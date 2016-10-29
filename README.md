@@ -1,5 +1,5 @@
 # supaplex
-A Canvas version of Supaplex with a supplied level editor. Levels are stored as JSON strings in the database. After the script is initialized, it requests a list of levels. Levels then can be requested via a GET request.
+A Canvas version of Supaplex with a supplied level editor. Levels are stored as JSON strings in the database. After the script is initialized, it requests a list of levels. Levels then can be requested via a GET request. This experiment is not using any external libraries.
 
 
 SQL structure
