@@ -1,0 +1,330 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Supaplex</title>
+		<style>
+			body{height: 100%; width: 100%; margin: 0; padding: 0;}
+		</style>
+	</head>
+	<body onload="init()">
+		<canvas id="tiles" style="display:none;" width="640" height="320"></canvas>
+		<canvas id="game" width="200" height="200" style="position: absolute; top: 0; left: 0;">
+		</canvas>
+
+		<div style="right:0; position:absolute;" id="levelmenu"></div>
+		<script>
+
+		document.onkeydown = checkKey;
+
+		document.getElementById('game').width = window.innerWidth;
+		document.getElementById('game').height = window.innerHeight;
+		var elements = [[]];
+		var lastupdate = Date.now();
+		var levels = [];
+
+		function level(name, desc)
+		{
+			this.name = name;
+			this.desc = desc;
+		}
+
+		var map = [
+		   [new tile(4, 1), new tile(4, 0), new tile(4, 0), new tile(4, 0), new tile(4, 0), new tile(4, 1)],
+		   [new tile(4, 0), new tile(2, 0), new tile(1, 0), new tile(1, 0), new tile(8, 0), new tile(4, 0)],
+		   [new tile(4, 0), new tile(1, 0), new tile(1, 0), new tile(5, 0), new tile(8, 0), new tile(7, 0)],
+		   [new tile(4, 0), new tile(1, 0), new tile(1, 0), new tile(5, 1), new tile(1, 0), new tile(4, 0)],
+		   [new tile(4, 1), new tile(4, 0), new tile(4, 0), new tile(4, 1), new tile(0, 0), new tile(4, 0)],
+		   [new tile(4, 0), new tile(6, 0), new tile(1, 0), new tile(0, 0), new tile(0, 0), new tile(4, 0)],
+		   [new tile(4, 0), new tile(1, 0), new tile(1, 0), new tile(0, 0), new tile(8, 0), new tile(4, 0)],
+		   [new tile(4, 1), new tile(4, 0), new tile(4, 0), new tile(4, 0), new tile(4, 0), new tile(4, 1)]
+		];
+
+		var player = 
+		{
+			x: 1,
+			y: 1,
+			state: 0
+		}
+
+		function tile(type, state, mv, overlay, os)
+		{
+			this.type = type;
+			this.state = state;
+			this.mv = mv || 0;
+			this.overlay = overlay || 0;
+			this.os = os || 0;
+		}
+
+		var c = document.getElementById('game').getContext('2d');
+		var img = document.getElementById('tiles').getContext('2d');
+
+		function init()
+		{
+			var im = new Image();
+			im.src = "tiles.png";
+
+			im.onload = function()
+			{
+				img.drawImage(im, 0, 0);
+				var imx = im.width / 32;
+				var imy = im.height / 32;
+
+				for(var x = 0; x < imx; x++) {
+					elements[x] = [];
+					for(var y = 0; y < imy; y++)
+					{
+						
+						elements[x][y] = img.getImageData(x * 32, y * 32, 32, 32);
+					}
+				}
+				draw_map();
+				getLevels();
+			}
+		}
+					  
+
+		function draw_map()
+		{
+			for(var y = 0; y < map.length; y++)
+			{
+				for(var x = 0; x < map[y].length; x++)
+				{
+					
+					c.putImageData(elements[map[y][x].type][map[y][x].state], x * 32, y * 32);
+				}
+			}
+		}
+
+		function checkZonks(x, y)
+		{
+			if(isZonk(x, y))
+			{
+				if(checkPlaceEmpty(x + 1, y)) moveBlock(x, y, x + 1, y); 
+				else if(checkPlaceEmpty(x - 1, y)) moveBlock(x, y, x + 1, y);
+			}
+		}
+
+		function checkPlace(x, y)
+		{
+			var t = map[y][x].type;
+			checkZonks(x, y);
+			return (t == 0 || t == 1 || t == 5 || t == 6);
+		}
+
+		function checkPlaceEmpty(x, y)
+		{
+			return (map[y][x].type == 0);
+		}
+
+		function movePlayer(x, y, state)
+		{
+			map[player.y][player.x].type = 0;
+			map[player.y][player.x].state = 0;
+			map[y][x].type = 2;
+			map[y][x].state = state;
+			player.x = x;
+			player.y = y;
+		}
+
+		function moveBlock(x, y, xd, yd)
+		{
+			map[yd][xd].type = map[y][x].type;
+			map[yd][xd].state = map[y][x].state;
+			map[y][x].type = 0;
+			map[y][x].state = 0;
+		}
+
+		function isZonk(x, y)
+		{
+			return (map[y][x].type == 8);
+		}
+
+		function setState(x, y, state)
+		{
+			map[y][x].state = state;
+		}
+
+		function countBlocksOfType(type)
+		{
+			var ret = 0;
+			for(var y = 0; y < map.length; y++)
+				for(var x = 0; x < map[y].length; x++)
+				{
+					if(map[y][x].type == type) ret++;
+				}
+			return ret;
+		}
+
+		function checkKey(e) {
+		    e = e || window.event;
+		    if (e.keyCode == '38' || e.keyCode == '87') {
+		        // up arrow
+		        if(checkPlace(player.x, player.y - 1)) movePlayer(player.x, player.y - 1, 0);
+		    }
+		    else if (e.keyCode == '40' || e.keyCode == '83') {
+		    	if(checkPlace(player.x, player.y + 1)) movePlayer(player.x, player.y + 1, 0);
+		        // down arrow
+		    }
+		    else if (e.keyCode == '37' || e.keyCode == '65') {
+		    	if(checkPlace(player.x - 1, player.y)) movePlayer(player.x - 1, player.y, 1);
+		       // left arrow
+		    }
+		    else if (e.keyCode == '39' || e.keyCode == '68') {
+		    	if(checkPlace(player.x + 1, player.y)) movePlayer(player.x + 1, player.y, 2);
+		       // right arrow
+		    }
+		}
+
+		function resize(e)
+		{
+			e = e || window.event;
+			document.getElementById('game').width = window.innerWidth;
+			document.getElementById('game').height = window.innerHeight;
+		}
+
+		function checkPlayerPosition()
+		{
+			var right = map[player.y][player.x + 1].type;
+			var left = map[player.y][player.x - 1].type;
+			var up = map[player.y - 1][player.x].type;
+			var down = map[player.y + 1][player.x].type;
+			if(right == 7 || left == 7 || up == 7 || down == 7) checkWinningConditions();
+		}
+
+		function setAllStonesMoveable()
+		{
+			for(var y = 0; y < map.length; y++)
+			{
+				for(var x = 0; x < map[y].length; x++)
+				{
+					if(map[y][x].type == 8)
+					{
+						map[y][x].mv = true;
+					}
+				}
+			}
+		}
+
+		function checkStones()
+		{
+			for(var y = 0; y < map.length; y++)
+			{
+				for(var x = 0; x < map[y].length; x++)
+				{
+					if(map[y][x].type == 8 && map[y][x].mv)
+					{
+						if(checkPlaceEmpty(x, y + 1))
+						{
+							if(map[y][x].state == 3) map[y][x].state = 0; else map[y][x].state++;
+								moveBlock(x, y, x, y + 1)
+								map[y + 1][x].mv = false;
+						}
+						else if(checkPlaceEmpty(x - 1, y + 1) && isZonk(x, y + 1) && checkPlaceEmpty(x - 1, y))
+						{
+								if(map[y][x].state == 3) map[y][x].state = 0; else map[y][x].state++;
+								moveBlock(x, y, x - 1, y)
+								map[y + 1][x - 1].mv = false;
+						}else if(checkPlaceEmpty(x + 1, y + 1) && isZonk(x, y + 1) && checkPlaceEmpty(x + 1, y))
+						{
+								if(map[y][x].state == 3) map[y][x].state = 0; else map[y][x].state++;
+								moveBlock(x, y, x + 1, y)
+								map[y + 1][x + 1].mv = false;
+						}
+					}
+				}
+			}
+			setAllStonesMoveable();
+		}
+
+		function update()
+		{
+			var dt = Date.now() - lastupdate;
+
+			if(dt >= 125) //125
+			{
+				checkStones();
+				checkPlayerPosition();
+				lastupdate = Date.now();
+			}
+			draw_map();
+		}
+
+		var interval = setInterval(update, 0);
+		var winAnnounced = false;
+
+		function checkWinningConditions()
+		{
+			if(winAnnounced == false)
+			{
+				if(countBlocksOfType(6) == 0) {alert("výhra"); winAnnounced = true;}
+			}
+
+		}
+
+		function removeObject(type)
+		{
+			for(var y = 0; y < map.length; y++)
+				for(var x = 0; x < map[y].length; x++)
+				{
+					if(map[y][x].type == type) map[y][x].type == 0;
+				}
+		}
+
+		function findObject(type)
+		{
+			for(var y = 0; y < map.length; y++)
+				for(var x = 0; x < map[y].length; x++)
+				{
+					if(map[y][x].type == type) return { px: x, py: y};
+				}
+		}
+
+		function loadLevel(id) {
+		  var xhttp = new XMLHttpRequest();
+		  xhttp.onreadystatechange = function() {
+		    if (xhttp.readyState == 4 && xhttp.status == 200) {
+		    	removeObject(2);
+		    	map = JSON.parse(xhttp.responseText);
+		    	var pos = findObject(2);
+		    	player.x = pos.px;
+		    	player.y = pos.py;
+		    }
+		  };
+		  xhttp.open("GET", "ajax.php?id=" + id, true);
+		  xhttp.send();
+		}
+
+		function getLevels() {
+		  var xhttp = new XMLHttpRequest();
+		  xhttp.onreadystatechange = function() {
+		    if (xhttp.readyState == 4 && xhttp.status == 200) {
+		    	levels = JSON.parse(xhttp.responseText);
+		    			  updateLevelList();
+		    }
+		  };
+		  xhttp.open("GET", "ajax.php?getlevels", true);
+		  xhttp.send();
+
+		}
+
+		function chooseLevel(e)
+		{
+			loadLevel(e.target.id);
+		}
+
+		function updateLevelList()
+		{
+			for(var i = 0; i < levels.length; i++)
+			{
+				var canvas = document.createElement('input');
+					canvas.type = "button";
+					canvas.id = levels[i][1];
+					canvas.value = levels[i][0];
+					canvas.addEventListener("click", chooseLevel);
+				document.getElementById('levelmenu').appendChild(canvas);
+			}
+		}
+		</script>
+	</body>
+</html>
+

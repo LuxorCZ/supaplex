@@ -1,0 +1,167 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Editor</title>
+		<style>
+			body{height: 100%; width: 100%; margin: 0; padding: 0;}
+			.main{width: 100%;}
+			.mapeditor{width: 80%; float:left;}
+			.mapelements{width: 20%; overflow: hidden; float:left;}
+		</style>
+	</head>
+	<body onload="init()">
+		<div class="main">
+		<div class="mapeditor" id="me">
+			<canvas id="tiles" style="display:none;" width="640" height="320"></canvas>
+			<canvas id="game" width="500" height="500" onclick="place()">
+		</div>
+		<div class="mapelements" id='menu'>
+			<input type="text" id="nazev">
+			<input type="text" id="popis">
+			<button onclick="sub()">Odeslat na server</button>
+		</div>
+		</div>
+		<script>
+
+		function tile(type, state, mv, overlay, os)
+		{
+			this.type = type;
+			this.state = state;
+			this.mv = mv || 0;
+			this.overlay = overlay || 0;
+			this.os = os || 0;
+		}
+
+
+
+		var elements = [[]];
+		var map = [[]];
+		var chosenBlock = 1;
+
+		var c = document.getElementById('game').getContext('2d');
+		var img = document.getElementById('tiles').getContext('2d');
+
+/*
+		document.getElementById('game').width = document.getElementById('me').width;
+		document.getElementById('game').height = document.getElementById('me').height;
+*/
+		function init()
+		{
+			var im = new Image();
+			im.src = "tiles.png";
+
+			im.onload = function()
+			{
+				img.drawImage(im, 0, 0);
+				var imx = im.width / 32;
+				var imy = im.height / 32;
+
+				for(var x = 0; x < imx; x++) {
+					elements[x] = [];
+					for(var y = 0; y < imy; y++)
+					{
+						elements[x][y] = img.getImageData(x * 32, y * 32, 32, 32);
+					}
+				}
+				prefillMap();
+				draw_map();
+				showBlocks();
+
+			}
+
+		}
+
+						document.getElementById('game').addEventListener("click", function( event )
+				{
+					console.log(event);
+					var can = document.getElementById('game');
+					var xp = Math.floor(event.clientX / 32);
+					var yp = Math.floor(event.clientY / 32);
+					map[yp][xp].type = chosenBlock;
+				}, false);
+
+		function draw_map()
+		{
+			for(var y = 0; y < map.length; y++)
+			{
+				for(var x = 0; x < map[y].length; x++)
+				{
+					c.putImageData(elements[map[y][x].type][map[y][x].state], x * 32, y * 32);
+				}
+			}
+		}
+
+		function showBlocks()
+		{
+			for(var i = 0; i < elements.length; i++)
+			{
+				var canvas = document.createElement('canvas');
+					canvas.id = i;
+					canvas.height = 32;
+					canvas.width = 32;
+					canvas.getContext('2d').putImageData(elements[i][0], 0, 0);
+					canvas.addEventListener("click", chooseBlock);
+				
+				document.getElementById('menu').appendChild(canvas);
+			}
+
+		}
+
+		function chooseBlock(e)
+		{
+			chosenBlock = e.target.id;
+
+		}
+
+		function prefillMap()
+		{
+			for(var y = 0; y < 30; y++)
+			{
+				map[y] = [];
+				for(var x = 0; x < 30; x++)
+				{
+					map[y][x] = new tile(0, 0);
+				}
+			}
+		}
+
+		function update()
+		{
+			draw_map();
+		}
+
+
+		function place(e)
+		{
+			console.log(e);
+			var can = document.getElementById('game');
+			var xp = Math.floor(e.x / 32);
+			var yp = Math.floor(e.y / 32);
+			map[yp][xp].type = chosenBlock;
+		}
+
+		var interval = setInterval(update, 0);
+
+		function sub()
+		{
+		  var xhttp = new XMLHttpRequest();
+		  xhttp.onreadystatechange = function() {
+		    if (xhttp.readyState == 4 && xhttp.status == 200) {
+		     alert(xhttp.responseText);
+		    }
+		  };
+		  var name = document.getElementById('nazev').value;
+		  var desc = document.getElementById('popis').value;
+
+		  var namevalue=encodeURIComponent(name);
+		  var descvalue=encodeURIComponent(desc);
+		  var json=encodeURIComponent(JSON.stringify(map));
+		  var parameters="name="+namevalue+"&desc="+descvalue+"&json=" + json;
+		  xhttp.open("POST", "ajax.php", true);
+		  xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		  xhttp.send(parameters);
+		}
+
+		</script>
+	</body>
+</html>
